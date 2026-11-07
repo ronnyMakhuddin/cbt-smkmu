@@ -1,7 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-const url = import.meta.env.VITE_SUPABASE_URL;
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Kunci publishable aman berada di frontend (data dilindungi RLS & fungsi database).
+// Environment variable di Vercel tetap diprioritaskan bila diisi.
+const url = import.meta.env.VITE_SUPABASE_URL || 'https://dcqzkqihpqriakidwrfi.supabase.co';
+const key = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_a7a7ePukAn7GX8KYaFxDHQ_bSeqYTaa';
 
 export const isConfigured = Boolean(url && key);
 export const supabase = isConfigured
