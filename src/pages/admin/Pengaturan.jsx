@@ -3,6 +3,48 @@ import { Save, ImagePlus, Trash2, KeyRound } from 'lucide-react';
 import { supabase, q } from '../../lib/supabase';
 import { Field, useToast, useSettings, DEFAULT_LOGO } from '../../components/ui';
 import { uploadImage } from '../../lib/upload';
+import { useProfil, isAdmin } from '../../components/AdminLayout';
+
+function PasswordCard() {
+  const toast = useToast();
+  const [pw, setPw] = useState('');
+  const changePw = async () => {
+    if (pw.length < 6) return toast.err('Password minimal 6 karakter');
+    const { error } = await supabase.auth.updateUser({ password: pw });
+    if (error) return toast.err(error.message);
+    setPw('');
+    toast.ok('Password berhasil diganti');
+  };
+  return (
+    <div className="clay">
+      <h2 className="mb">Ganti Password Akun</h2>
+      <div className="row" style={{ flexWrap: 'nowrap' }}>
+        <input className="input" type="password" placeholder="Password baru" value={pw} onChange={(e) => setPw(e.target.value)} />
+        <button className="btn amber" onClick={changePw}><KeyRound size={16} /> Ganti</button>
+      </div>
+    </div>
+  );
+}
+
+export default function Pengaturan() {
+  const profil = useProfil();
+  if (!isAdmin(profil)) {
+    return (
+      <div>
+        <div className="page-head"><h1>Akun Saya</h1></div>
+        <div className="grid g2" style={{ alignItems: 'start' }}>
+          <div className="clay">
+            <h2 className="mb">{profil?.nama}</h2>
+            <p className="muted">{profil?.email} · Guru</p>
+            <p className="small muted mt">Hubungi admin untuk mengubah nama, email, atau mapel yang diampu.</p>
+          </div>
+          <PasswordCard />
+        </div>
+      </div>
+    );
+  }
+  return <PengaturanSekolah />;
+}
 
 const FIELDS = [
   ['nama_sekolah', 'Nama Sekolah', 'SMK Muhammadiyah ...'],
@@ -18,13 +60,12 @@ const FIELDS = [
   ['judul_ujian', 'Judul Kegiatan Ujian (default kartu)', 'Penilaian Akhir Semester'],
 ];
 
-export default function Pengaturan() {
+function PengaturanSekolah() {
   const toast = useToast();
   const { settings, setSettings } = useSettings();
   const fileRef = useRef(null);
   const [form, setForm] = useState(settings);
   const [busy, setBusy] = useState(false);
-  const [pw, setPw] = useState('');
 
   useEffect(() => setForm(settings), [settings]);
 
@@ -46,14 +87,6 @@ export default function Pengaturan() {
       setForm((f) => ({ ...f, logo_url: url }));
       await save({ logo_url: url });
     } catch (e) { toast.err(e); setBusy(false); }
-  };
-
-  const changePw = async () => {
-    if (pw.length < 6) return toast.err('Password minimal 6 karakter');
-    const { error } = await supabase.auth.updateUser({ password: pw });
-    if (error) return toast.err(error.message);
-    setPw('');
-    toast.ok('Password admin diganti');
   };
 
   return (
@@ -87,13 +120,7 @@ export default function Pengaturan() {
               <input ref={fileRef} type="file" hidden accept="image/*" onChange={(e) => { uploadLogo(e.target.files[0]); e.target.value = ''; }} />
             </div>
 
-            <div className="clay">
-              <h2 className="mb">Ganti Password Admin</h2>
-              <div className="row" style={{ flexWrap: 'nowrap' }}>
-                <input className="input" type="password" placeholder="Password baru" value={pw} onChange={(e) => setPw(e.target.value)} />
-                <button className="btn amber" onClick={changePw}><KeyRound size={16} /> Ganti</button>
-              </div>
-            </div>
+            <PasswordCard />
           </div>
         </div>
       </div>

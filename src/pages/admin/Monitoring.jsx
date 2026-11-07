@@ -83,7 +83,7 @@ export default function Monitoring() {
     if (await confirm(`Reset ujian ${r.nama}? Semua jawaban dihapus dan siswa dapat mengulang dari awal.`))
       act(() => q(supabase.from('peserta_ujian').delete().eq('id', r.p.id)), 'Ujian peserta direset');
   };
-  const resetLogin = (r) => act(() => q(supabase.from('siswa').update({ session_token: null }).eq('id', r.id)), `Login ${r.nama} direset`);
+  const resetLogin = (r) => act(() => rpc('staf_reset_login', { p_siswa: r.id }), `Login ${r.nama} direset`);
   const hitungUlang = () => act(() => rpc('admin_hitung_ulang', { p_ujian: ujianId }), 'Nilai dihitung ulang');
   const showLog = async (r) => {
     try {

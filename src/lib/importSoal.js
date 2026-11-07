@@ -23,7 +23,7 @@ export function rowToSoal(r, idx) {
   let pertanyaan = r.pertanyaan || r.soal || '';
   if (!pertanyaan) throw new Error(`Baris ${n}: pertanyaan kosong`);
   if (r.gambar) pertanyaan += `\n![gambar](${r.gambar})`;
-  const teksOpsi = LETTERS.slice(0, 10).map((L) => r['opsi_' + L.toLowerCase()] || r[L.toLowerCase()] || '').filter(Boolean);
+  const teksOpsi = LETTERS.slice(0, 5).map((L) => r['opsi_' + L.toLowerCase()] || r[L.toLowerCase()] || '').filter(Boolean);
   if (!teksOpsi.length) throw new Error(`Baris ${n}: opsi kosong`);
   const kunciRaw = (r.kunci || '').trim();
   if (!kunciRaw) throw new Error(`Baris ${n}: kunci kosong`);

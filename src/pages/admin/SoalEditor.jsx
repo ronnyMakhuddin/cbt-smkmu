@@ -9,6 +9,7 @@ import { LETTERS, TIPE_LABEL } from '../../lib/util';
 import { readSheet, downloadSheet } from '../../lib/excel';
 import { rowToSoal, soalToRow, TEMPLATE_SOAL } from '../../lib/importSoal';
 
+const MAX_OPSI = 5; // pilihan A sampai E
 const LABEL_PRESETS = [['Benar', 'Salah'], ['Sesuai', 'Tidak Sesuai'], ['Ya', 'Tidak'], ['Fakta', 'Opini']];
 
 const blank = (tipe = 'pg') => ({
@@ -37,8 +38,8 @@ function SoalForm({ value, onChange }) {
   const setOpsi = (i, teks) => set({ opsi: s.opsi.map((o, j) => (j === i ? { ...o, teks } : o)) });
 
   const addOpsi = () => {
+    if (s.tipe !== 'kategori' && s.opsi.length >= MAX_OPSI) return;
     const id = s.tipe === 'kategori' ? String(Math.max(0, ...s.opsi.map((o) => +o.id)) + 1) : LETTERS[s.opsi.length];
-    if (!id) return;
     set({ opsi: [...s.opsi, { id, teks: '' }] });
   };
 
@@ -89,7 +90,7 @@ function SoalForm({ value, onChange }) {
       )}
 
       <label className="label">
-        {s.tipe === 'kategori' ? 'Pernyataan & kunci' : s.tipe === 'mcma' ? 'Opsi jawaban (centang SEMUA jawaban benar)' : 'Opsi jawaban (pilih 1 kunci)'}
+        {s.tipe === 'kategori' ? 'Pernyataan & kunci' : s.tipe === 'mcma' ? 'Opsi jawaban A–E (centang SEMUA jawaban benar)' : 'Opsi jawaban A–E (pilih 1 kunci)'}
       </label>
       {s.opsi.map((o, i) => (
         <div key={o.id + i} className="clay-sm mb" style={{ padding: 12 }}>
@@ -119,7 +120,7 @@ function SoalForm({ value, onChange }) {
         </div>
       ))}
       <div className="row between">
-        <button type="button" className="btn ghost sm" onClick={addOpsi}><Plus size={15} /> Tambah {s.tipe === 'kategori' ? 'pernyataan' : 'opsi'}</button>
+        <button type="button" className="btn ghost sm" onClick={addOpsi} disabled={s.tipe !== 'kategori' && s.opsi.length >= MAX_OPSI}><Plus size={15} /> Tambah {s.tipe === 'kategori' ? 'pernyataan' : 'opsi'}</button>
         <div className="row" style={{ flexWrap: 'nowrap' }}>
           <span className="small bold muted">Bobot</span>
           <input className="input" type="number" min="0.5" step="0.5" style={{ width: 90 }} value={s.bobot} onChange={(e) => set({ bobot: e.target.value })} />

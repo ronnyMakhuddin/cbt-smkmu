@@ -129,21 +129,80 @@ create table if not exists public.log_pelanggaran (
 create index if not exists log_peserta_idx on public.log_pelanggaran(peserta_id);
 
 -- ---------------------------------------------------------------------
--- ROW LEVEL SECURITY
--- Admin  = user Supabase Auth (role authenticated) -> akses penuh.
+-- ROW LEVEL SECURITY & PERAN PENGGUNA
+-- Admin  = user Supabase Auth dengan peran 'admin' di tabel pengguna -> akses penuh.
+-- Guru   = user Supabase Auth dengan peran 'guru' -> kelola bank soal & ujian
+--          miliknya sendiri, memantau ujiannya, membaca data kelas/mapel/siswa.
 -- Siswa  = role anon -> TIDAK punya akses tabel langsung; semua lewat
 --          fungsi RPC (security definer) yang memvalidasi token sesi.
 --          Ini mencegah siswa membaca kunci jawaban / data siswa lain.
 -- ---------------------------------------------------------------------
+create table if not exists public.pengguna (
+  id uuid primary key references auth.users(id) on delete cascade,
+  nama text not null,
+  email text,
+  role text not null default 'guru' check (role in ('admin','guru')),
+  mapel_ids uuid[] not null default '{}',
+  created_at timestamptz default now()
+);
+alter table public.bank_soal add column if not exists created_by uuid default auth.uid();
+alter table public.ujian add column if not exists created_by uuid default auth.uid();
+
+create or replace function public.is_admin()
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists(select 1 from public.pengguna where id = auth.uid() and role = 'admin');
+$$;
+
+create or replace function public.is_staf()
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists(select 1 from public.pengguna where id = auth.uid());
+$$;
+
+-- guru boleh mengelola bank soal buatannya atau bank soal mapel yang diampunya
+create or replace function public.boleh_bank(p_bank uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select public.is_admin() or exists(
+    select 1 from public.bank_soal b join public.pengguna g on g.id = auth.uid()
+     where b.id = p_bank and (b.created_by = g.id or b.mapel_id = any(g.mapel_ids)));
+$$;
+
+create or replace function public.boleh_ujian(p_ujian uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select public.is_admin() or exists(
+    select 1 from public.ujian u where u.id = p_ujian and (u.created_by = auth.uid() or public.boleh_bank(u.bank_id)));
+$$;
+
 do $$
 declare t text;
 begin
-  foreach t in array array['settings','kelas','siswa','mapel','bank_soal','soal','ujian','peserta_ujian','log_pelanggaran'] loop
+  foreach t in array array['settings','kelas','siswa','mapel','bank_soal','soal','ujian','peserta_ujian','log_pelanggaran','pengguna'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists "admin_all" on public.%I', t);
-    execute format('create policy "admin_all" on public.%I for all to authenticated using (true) with check (true)', t);
+    execute format('create policy "admin_all" on public.%I for all to authenticated using (public.is_admin()) with check (public.is_admin())', t);
+    execute format('drop policy if exists "guru_baca" on public.%I', t);
+    execute format('drop policy if exists "guru_kelola" on public.%I', t);
   end loop;
 end $$;
+
+-- guru: baca data master
+create policy "guru_baca" on public.settings for select to authenticated using (public.is_staf());
+create policy "guru_baca" on public.kelas for select to authenticated using (public.is_staf());
+create policy "guru_baca" on public.mapel for select to authenticated using (public.is_staf());
+create policy "guru_baca" on public.siswa for select to authenticated using (public.is_staf());
+create policy "guru_baca" on public.pengguna for select to authenticated using (id = auth.uid());
+-- guru: kelola bank soal, soal, ujian miliknya
+create policy "guru_kelola" on public.bank_soal for all to authenticated
+  using (public.is_staf() and public.boleh_bank(id))
+  with check (public.is_staf() and (created_by = auth.uid() or public.boleh_bank(id)));
+create policy "guru_kelola" on public.soal for all to authenticated
+  using (public.boleh_bank(bank_id)) with check (public.boleh_bank(bank_id));
+create policy "guru_kelola" on public.ujian for all to authenticated
+  using (public.is_staf() and (created_by = auth.uid() or public.boleh_bank(bank_id)))
+  with check (public.is_staf() and public.boleh_bank(bank_id));
+create policy "guru_kelola" on public.peserta_ujian for all to authenticated
+  using (public.boleh_ujian(ujian_id)) with check (public.boleh_ujian(ujian_id));
+create policy "guru_baca" on public.log_pelanggaran for select to authenticated
+  using (exists(select 1 from public.peserta_ujian p where p.id = peserta_id and public.boleh_ujian(p.ujian_id)));
 
 drop policy if exists "public_read_settings" on public.settings;
 create policy "public_read_settings" on public.settings for select to anon using (true);
@@ -443,10 +502,10 @@ returns int
 language plpgsql security definer set search_path = public as $$
 declare n int := 0; r record;
 begin
-  if auth.role() <> 'authenticated' then raise exception 'Akses ditolak'; end if;
+  if not public.is_staf() then raise exception 'Akses ditolak'; end if;
   for r in select id from public.peserta_ujian
             where status = 'berlangsung' and batas_at < now()
-              and (p_ujian is null or ujian_id = p_ujian) loop
+              and (p_ujian is null or ujian_id = p_ujian) and public.boleh_ujian(ujian_id) loop
     perform public._finalisasi(r.id); n := n + 1;
   end loop;
   return n;
@@ -456,7 +515,9 @@ create or replace function public.admin_selesaikan(p_peserta uuid)
 returns void
 language plpgsql security definer set search_path = public as $$
 begin
-  if auth.role() <> 'authenticated' then raise exception 'Akses ditolak'; end if;
+  if not exists(select 1 from public.peserta_ujian where id = p_peserta and public.boleh_ujian(ujian_id)) then
+    raise exception 'Akses ditolak';
+  end if;
   perform public._finalisasi(p_peserta);
 end $$;
 
@@ -465,11 +526,92 @@ returns int
 language plpgsql security definer set search_path = public as $$
 declare n int := 0; r record;
 begin
-  if auth.role() <> 'authenticated' then raise exception 'Akses ditolak'; end if;
+  if not public.boleh_ujian(p_ujian) then raise exception 'Akses ditolak'; end if;
   for r in select id from public.peserta_ujian where ujian_id = p_ujian and status = 'selesai' loop
     perform public.hitung_nilai(r.id); n := n + 1;
   end loop;
   return n;
+end $$;
+
+-- ---------------------------------------------------------------------
+-- AKUN ADMIN & GURU
+-- ---------------------------------------------------------------------
+-- Dipanggil setelah login. Akun pertama yang login otomatis menjadi admin.
+create or replace function public.profil_saya()
+returns json
+language plpgsql security definer set search_path = public as $$
+declare p public.pengguna; em text;
+begin
+  if auth.uid() is null then return null; end if;
+  select * into p from public.pengguna where id = auth.uid();
+  if not found then
+    if exists(select 1 from public.pengguna where role = 'admin') then return null; end if;
+    select email into em from auth.users where id = auth.uid();
+    insert into public.pengguna (id, nama, email, role) values (auth.uid(), coalesce(split_part(em, '@', 1), 'Admin'), em, 'admin')
+    returning * into p;
+  end if;
+  return row_to_json(p);
+end $$;
+
+create or replace function public.admin_simpan_pengguna(
+  p_id uuid, p_nama text, p_email text, p_password text, p_role text, p_mapel uuid[])
+returns uuid
+language plpgsql security definer set search_path = public, extensions as $$
+declare uid uuid := p_id; em text := lower(trim(p_email));
+begin
+  if not public.is_admin() then raise exception 'Hanya admin yang dapat mengelola akun'; end if;
+  if coalesce(trim(p_nama), '') = '' or em = '' then raise exception 'Nama dan email wajib diisi'; end if;
+  if p_role not in ('admin', 'guru') then raise exception 'Peran tidak valid'; end if;
+  if exists(select 1 from auth.users where lower(email) = em and id is distinct from uid) then
+    raise exception 'Email sudah dipakai akun lain';
+  end if;
+  if uid is null then
+    if length(coalesce(p_password, '')) < 6 then raise exception 'Password minimal 6 karakter'; end if;
+    uid := gen_random_uuid();
+    insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+      raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+      confirmation_token, recovery_token, email_change, email_change_token_new)
+    values ('00000000-0000-0000-0000-000000000000', uid, 'authenticated', 'authenticated', em,
+      crypt(p_password, gen_salt('bf')), now(),
+      '{"provider":"email","providers":["email"]}'::jsonb, jsonb_build_object('nama', p_nama), now(), now(),
+      '', '', '', '');
+    insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+    values (gen_random_uuid(), uid, uid::text,
+      jsonb_build_object('sub', uid::text, 'email', em, 'email_verified', true), 'email', now(), now(), now());
+    insert into public.pengguna (id, nama, email, role, mapel_ids) values (uid, trim(p_nama), em, p_role, coalesce(p_mapel, '{}'));
+  else
+    if uid = auth.uid() and p_role <> 'admin' then raise exception 'Tidak bisa menurunkan peran akun sendiri'; end if;
+    update public.pengguna set nama = trim(p_nama), email = em, role = p_role, mapel_ids = coalesce(p_mapel, '{}') where id = uid;
+    if not found then
+      if not exists(select 1 from auth.users where id = uid) then raise exception 'Akun tidak ditemukan'; end if;
+      insert into public.pengguna (id, nama, email, role, mapel_ids) values (uid, trim(p_nama), em, p_role, coalesce(p_mapel, '{}'));
+    end if;
+    update auth.users set email = em, updated_at = now() where id = uid;
+    update auth.identities set identity_data = identity_data || jsonb_build_object('email', em) where user_id = uid and provider = 'email';
+    if coalesce(p_password, '') <> '' then
+      if length(p_password) < 6 then raise exception 'Password minimal 6 karakter'; end if;
+      update auth.users set encrypted_password = crypt(p_password, gen_salt('bf')), updated_at = now() where id = uid;
+    end if;
+  end if;
+  return uid;
+end $$;
+
+create or replace function public.admin_hapus_pengguna(p_id uuid)
+returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'Hanya admin yang dapat mengelola akun'; end if;
+  if p_id = auth.uid() then raise exception 'Tidak bisa menghapus akun sendiri'; end if;
+  delete from auth.users where id = p_id;
+end $$;
+
+-- pengawas/guru boleh reset login siswa yang tertahan "dipakai di perangkat lain"
+create or replace function public.staf_reset_login(p_siswa uuid)
+returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_staf() then raise exception 'Akses ditolak'; end if;
+  update public.siswa set session_token = null where id = p_siswa;
 end $$;
 
 -- ---------------------------------------------------------------------
@@ -489,7 +631,14 @@ grant execute on function public.siswa_selesai(uuid, uuid) to anon, authenticate
 grant execute on function public.admin_finalisasi_kadaluarsa(uuid) to authenticated;
 grant execute on function public.admin_selesaikan(uuid) to authenticated;
 grant execute on function public.admin_hitung_ulang(uuid) to authenticated;
-grant execute on function public.hitung_nilai(uuid) to authenticated;
+grant execute on function public.is_admin() to authenticated;
+grant execute on function public.is_staf() to authenticated;
+grant execute on function public.boleh_bank(uuid) to authenticated;
+grant execute on function public.boleh_ujian(uuid) to authenticated;
+grant execute on function public.profil_saya() to authenticated;
+grant execute on function public.admin_simpan_pengguna(uuid, text, text, text, text, uuid[]) to authenticated;
+grant execute on function public.admin_hapus_pengguna(uuid) to authenticated;
+grant execute on function public.staf_reset_login(uuid) to authenticated;
 
 -- ---------------------------------------------------------------------
 -- STORAGE: bucket "media" untuk gambar soal & logo sekolah

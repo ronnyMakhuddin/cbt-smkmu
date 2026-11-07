@@ -1,7 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { isConfigured } from './lib/supabase';
 import { ToastProvider, ConfirmProvider, SettingsProvider } from './components/ui';
-import AdminLayout from './components/AdminLayout';
+import AdminLayout, { AdminOnly } from './components/AdminLayout';
+import Guru from './pages/admin/Guru';
 import SetupNotice from './pages/SetupNotice';
 import AdminLogin from './pages/admin/AdminLogin';
 import Dashboard from './pages/admin/Dashboard';
@@ -30,13 +31,14 @@ export default function App() {
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Dashboard />} />
-              <Route path="siswa" element={<Siswa />} />
-              <Route path="master" element={<DataMaster />} />
+              <Route path="siswa" element={<AdminOnly><Siswa /></AdminOnly>} />
+              <Route path="master" element={<AdminOnly><DataMaster /></AdminOnly>} />
               <Route path="bank" element={<BankSoal />} />
               <Route path="bank/:id" element={<SoalEditor />} />
               <Route path="ujian" element={<Ujian />} />
+              <Route path="guru" element={<AdminOnly><Guru /></AdminOnly>} />
               <Route path="monitoring" element={<Monitoring />} />
-              <Route path="kartu" element={<KartuUjian />} />
+              <Route path="kartu" element={<AdminOnly><KartuUjian /></AdminOnly>} />
               <Route path="pengaturan" element={<Pengaturan />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

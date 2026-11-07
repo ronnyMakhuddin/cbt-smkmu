@@ -6,6 +6,7 @@ Aplikasi ujian berbasis komputer (Computer Based Test) untuk SMK. Dibangun denga
 
 **Panel Admin** (login lewat Supabase Auth, alamat `/admin`)
 - Dashboard ringkasan
+- **Akun Guru & Admin**: admin membuat akun guru langsung dari aplikasi (menu *Guru & Admin*), memilih mapel yang diampu, dan reset password
 - Data siswa: tambah/edit, **import Excel**, export, generate password, reset login
 - Kelas & mata pelajaran
 - Bank soal dengan editor soal:
@@ -37,7 +38,7 @@ Aplikasi ujian berbasis komputer (Computer Based Test) untuk SMK. Dibangun denga
 ### 1. Siapkan Supabase
 1. Buat project di [supabase.com](https://supabase.com).
 2. Buka **SQL Editor**, tempel seluruh isi [`supabase/schema.sql`](supabase/schema.sql), lalu **Run**. File ini membuat tabel, keamanan (RLS), fungsi ujian, dan bucket storage `media`.
-3. Buka **Authentication → Users → Add user**, buat akun admin (email + password, centang *Auto Confirm*).
+3. Buka **Authentication → Users → Add user**, buat akun admin (email + password, centang *Auto Confirm*). Akun pertama yang login ke `/admin` otomatis menjadi **admin**.
 4. Buka **Authentication → Sign In / Providers** dan **matikan "Allow new users to sign up"**, supaya tidak ada orang lain yang bisa mendaftar sebagai admin.
 5. Buka **Project Settings → API**, salin **Project URL** dan **anon public key**.
 
@@ -56,6 +57,16 @@ Aplikasi ujian berbasis komputer (Computer Based Test) untuk SMK. Dibangun denga
 4. **Kartu Ujian**: cetak dan bagikan ke siswa.
 5. Siswa membuka `https://domain-anda/` dan login dengan NIS + password.
 
+## Peran Akun
+
+| Peran | Akses |
+|---|---|
+| Admin | Semua menu: siswa, kelas & mapel, akun guru, bank soal, ujian, monitoring, kartu ujian, pengaturan |
+| Guru | Bank soal buatannya + bank soal mapel yang diampu, ujian dari bank soal tersebut, monitoring & nilai ujiannya, ganti password sendiri |
+| Siswa | Login NIS + password, mengerjakan ujian |
+
+Akun guru/admin tambahan dibuat dari menu **Guru & Admin** (bukan dari dashboard Supabase). Guru login di `/admin` dengan email & password yang diberikan admin.
+
 ## Format Import Soal (Excel)
 
 Unduh template dari tombol **Template** di halaman bank soal. Kolom:
@@ -65,7 +76,7 @@ Unduh template dari tombol **Template** di halaman bank soal. Kolom:
 | `tipe` | `PG`, `MCMA`, atau `KATEGORI` |
 | `pertanyaan` | Teks soal. Rumus ditulis `$\frac{1}{2}$`, gambar `![](https://url-gambar)` |
 | `gambar` | (opsional) URL gambar soal |
-| `opsi_a` … `opsi_e` | Opsi jawaban, atau pernyataan untuk tipe KATEGORI |
+| `opsi_a` … `opsi_e` | Opsi jawaban A sampai E (maksimal 5), atau pernyataan untuk tipe KATEGORI |
 | `kunci` | PG: `A` · MCMA: `A,C,E` · KATEGORI: `B,S,B` atau `Sesuai,Tidak Sesuai` (urut sesuai pernyataan) |
 | `label` | Khusus KATEGORI: `Benar/Salah` atau `Sesuai/Tidak Sesuai` |
 | `bobot` | Bobot nilai (default 1) |
@@ -84,5 +95,5 @@ npm run dev
 
 ## Catatan Keamanan
 - Siswa tidak memiliki akses langsung ke tabel. Semua aksi siswa melewati fungsi database (`siswa_*`) yang memeriksa token sesi.
-- Semua pengguna Supabase Auth dianggap admin, jadi pastikan pendaftaran publik dimatikan (langkah 1.4).
+- Hanya akun yang terdaftar di tabel `pengguna` yang bisa masuk panel. Tetap matikan pendaftaran publik (langkah 1.4).
 - Browser tidak bisa sepenuhnya mencegah kecurangan (misalnya HP kedua). Untuk pengamanan maksimal gunakan bersama aplikasi exam browser / pengawasan ruang.
