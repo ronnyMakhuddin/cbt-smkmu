@@ -47,7 +47,7 @@ export default function SiswaHome() {
   return (
     <div style={{ maxWidth: 980, margin: '0 auto', padding: '20px 16px 60px' }}>
       <div className="clay tint-primary row mb" style={{ gap: 16 }}>
-        <SchoolLogo size={58} className="tint-pink" />
+        <SchoolLogo size={58} />
         <div className="grow" style={{ minWidth: 0 }}>
           <div className="small" style={{ opacity: 0.85 }}>{settings.nama_sekolah}</div>
           <h2 style={{ color: '#fff' }}>Halo, {me.nama}</h2>

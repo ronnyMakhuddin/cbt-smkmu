@@ -119,7 +119,7 @@ export default function Siswa() {
       <div className="clay">
         <div className="row mb">
           <div className="row grow" style={{ flexWrap: 'nowrap', minWidth: 200 }}>
-            <Search size={18} color="#7a7f9a" />
+            <Search size={18} color="#7b7f86" />
             <input className="input" placeholder="Cari NIS / nama..." value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <select className="input" style={{ width: 200 }} value={fKelas} onChange={(e) => setFKelas(e.target.value)}>

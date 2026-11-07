@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Save, ImagePlus, Trash2, School, KeyRound } from 'lucide-react';
+import { Save, ImagePlus, Trash2, KeyRound } from 'lucide-react';
 import { supabase, q } from '../../lib/supabase';
-import { Field, useToast, useSettings } from '../../components/ui';
+import { Field, useToast, useSettings, DEFAULT_LOGO } from '../../components/ui';
 import { uploadImage } from '../../lib/upload';
 
 const FIELDS = [
@@ -77,13 +77,13 @@ export default function Pengaturan() {
             <div className="clay center">
               <h2 className="mb">Logo Sekolah</h2>
               <div className="clay-in" style={{ width: 160, height: 160, margin: '0 auto', display: 'grid', placeItems: 'center', borderRadius: 32 }}>
-                {form.logo_url ? <img src={form.logo_url} alt="logo" style={{ maxWidth: 130, maxHeight: 130, objectFit: 'contain' }} /> : <School size={64} color="#b4b8d6" />}
+                <img src={form.logo_url || DEFAULT_LOGO} alt="logo" style={{ maxWidth: 130, maxHeight: 130, objectFit: 'contain' }} />
               </div>
               <div className="row mt" style={{ justifyContent: 'center' }}>
                 <button className="btn pink" disabled={busy} onClick={() => fileRef.current.click()}><ImagePlus size={17} /> Unggah Logo</button>
-                {form.logo_url && <button className="btn ghost" disabled={busy} onClick={() => { setForm({ ...form, logo_url: null }); save({ logo_url: null }); }}><Trash2 size={17} /> Hapus</button>}
+                {form.logo_url && <button className="btn ghost" disabled={busy} onClick={() => { setForm({ ...form, logo_url: null }); save({ logo_url: null }); }}><Trash2 size={17} /> Pakai Logo Bawaan</button>}
               </div>
-              <p className="tiny muted mt">PNG transparan disarankan. Logo tampil di halaman login, sidebar, dan kartu ujian.</p>
+              <p className="tiny muted mt">PNG transparan disarankan. Bila kosong, logo bawaan SMK Mamba'ul Ulum dipakai. Logo tampil di halaman login, sidebar, dan kartu ujian.</p>
               <input ref={fileRef} type="file" hidden accept="image/*" onChange={(e) => { uploadLogo(e.target.files[0]); e.target.value = ''; }} />
             </div>
 

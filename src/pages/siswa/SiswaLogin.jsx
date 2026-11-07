@@ -40,14 +40,14 @@ export default function SiswaLogin() {
         <div className="field">
           <label className="label">Username / NIS</label>
           <div className="row" style={{ flexWrap: 'nowrap' }}>
-            <User size={18} color="#7a7f9a" />
+            <User size={18} color="#7b7f86" />
             <input className="input" required autoComplete="username" value={nis} onChange={(e) => setNis(e.target.value)} placeholder="Masukkan NIS" />
           </div>
         </div>
         <div className="field">
           <label className="label">Password</label>
           <div className="row" style={{ flexWrap: 'nowrap' }}>
-            <Lock size={18} color="#7a7f9a" />
+            <Lock size={18} color="#7b7f86" />
             <input className="input" required type={show ? 'text' : 'password'} autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Password di kartu ujian" />
             <button type="button" className="btn ghost icon" onClick={() => setShow(!show)}>{show ? <EyeOff size={16} /> : <Eye size={16} />}</button>
           </div>

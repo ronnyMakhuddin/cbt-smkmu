@@ -11,10 +11,10 @@ create extension if not exists pgcrypto;
 -- ---------------------------------------------------------------------
 create table if not exists public.settings (
   id int primary key default 1 check (id = 1),
-  nama_sekolah text default 'SMK Negeri',
+  nama_sekolah text default 'SMK Mamba''ul Ulum',
   npsn text,
   alamat text,
-  kota text,
+  kota text default 'Mojokerto',
   telepon text,
   email text,
   kepala_sekolah text,
@@ -26,6 +26,7 @@ create table if not exists public.settings (
   updated_at timestamptz default now()
 );
 insert into public.settings (id) values (1) on conflict (id) do nothing;
+update public.settings set nama_sekolah = 'SMK Mamba''ul Ulum', kota = coalesce(kota, 'Mojokerto') where id = 1 and nama_sekolah = 'SMK Negeri';
 
 create table if not exists public.kelas (
   id uuid primary key default gen_random_uuid(),

@@ -39,7 +39,7 @@ export default function Dashboard() {
   return (
     <div>
       <div className="clay tint-primary mb row" style={{ gap: 18 }}>
-        <SchoolLogo size={64} className="tint-pink" />
+        <SchoolLogo size={64} />
         <div className="grow">
           <div className="small" style={{ opacity: 0.85 }}>Selamat datang di</div>
           <h1 style={{ color: '#fff' }}>{settings.nama_sekolah}</h1>

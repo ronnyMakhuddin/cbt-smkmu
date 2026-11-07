@@ -82,7 +82,7 @@ export const Spinner = () => <div className="spinner" />;
 export function Empty({ text = 'Belum ada data', icon: Icon = Inbox, children }) {
   return (
     <div className="empty">
-      <div className="empty-ico clay-sm"><Icon size={30} color="#8b84ff" /></div>
+      <div className="empty-ico clay-sm"><Icon size={30} color="#f0832a" /></div>
       <div className="bold">{text}</div>
       {children && <div className="mt">{children}</div>}
     </div>
@@ -101,30 +101,30 @@ export function Field({ label, children, hint }) {
 
 /* ---------- Pengaturan sekolah (global) ---------- */
 const SettingsCtx = createContext(null);
+export const DEFAULT_LOGO = '/logo.png';
+const DEFAULTS = { nama_sekolah: "SMK Mamba'ul Ulum", kota: 'Mojokerto', tahun_ajaran: '2026/2027', semester: 'Ganjil' };
 export function SettingsProvider({ children }) {
-  const [settings, setSettings] = useState({ nama_sekolah: 'CBT SMK' });
+  const [settings, setSettings] = useState(DEFAULTS);
   const reload = useCallback(async () => {
     if (!isConfigured) return;
     const { data } = await supabase.from('settings').select('*').eq('id', 1).maybeSingle();
-    if (data) setSettings(data);
+    if (data) setSettings({ ...data, nama_sekolah: data.nama_sekolah || DEFAULTS.nama_sekolah });
   }, []);
   useEffect(() => { reload(); }, [reload]);
   useEffect(() => {
     document.title = `CBT ${settings.nama_sekolah || 'SMK'}`;
-    if (settings.logo_url) {
-      const link = document.querySelector("link[rel='icon']");
-      if (link) link.href = settings.logo_url;
-    }
+    const link = document.querySelector("link[rel='icon']");
+    if (link) link.href = settings.logo_url || '/icon-192.png';
   }, [settings]);
   return <SettingsCtx.Provider value={{ settings, reload, setSettings }}>{children}</SettingsCtx.Provider>;
 }
 export const useSettings = () => useContext(SettingsCtx);
 
-export function SchoolLogo({ size = 46, className = 'tint-primary' }) {
+export function SchoolLogo({ size = 46 }) {
   const { settings } = useSettings();
   return (
-    <div className={`brand-logo ${settings.logo_url ? '' : className}`} style={{ width: size, height: size, boxShadow: 'var(--shadow-clay-sm)' }}>
-      {settings.logo_url ? <img src={settings.logo_url} alt="logo" /> : <span style={{ fontWeight: 900, fontSize: size * 0.36 }}>CBT</span>}
+    <div className="brand-logo" style={{ width: size, height: size, boxShadow: 'var(--shadow-clay-sm)', background: '#fff', padding: size * 0.06 }}>
+      <img src={settings.logo_url || DEFAULT_LOGO} alt="logo" />
     </div>
   );
 }

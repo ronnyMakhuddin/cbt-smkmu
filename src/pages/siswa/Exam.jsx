@@ -282,7 +282,7 @@ export default function Exam() {
           <h2 className="mt">{data.ujian?.nama}</h2>
           <p className="muted small">{data.ujian?.mapel} · {soal.length} soal · sisa waktu {fmtTime(remaining)}</p>
           <div className="clay-in small mt" style={{ textAlign: 'left' }}>
-            <ShieldAlert size={16} color="#ff6b6b" /> <b>Mode anti curang aktif.</b> Jangan keluar layar penuh, berpindah aplikasi, atau membuka tab lain.
+            <ShieldAlert size={16} color="#e5443a" /> <b>Mode anti curang aktif.</b> Jangan keluar layar penuh, berpindah aplikasi, atau membuka tab lain.
             {data.ujian?.max_pelanggaran > 0 && <> Ujian terkunci setelah <b>{data.ujian.max_pelanggaran}</b> pelanggaran (saat ini {pel}).</>}
           </div>
           <button className="btn mint block mt" onClick={begin}><Maximize size={18} /> {answeredCount ? 'Lanjutkan Ujian' : 'Mulai Ujian'}</button>
@@ -420,7 +420,7 @@ export default function Exam() {
       {guard && (
         <div className="guard">
           <div className="clay center" style={{ maxWidth: 420 }}>
-            <ShieldAlert size={54} color="#ff6b6b" />
+            <ShieldAlert size={54} color="#e5443a" />
             <h2 className="mt">Kembali ke Layar Penuh</h2>
             <p className="muted mt">Keluar dari layar penuh tercatat sebagai pelanggaran ({pel}{data.ujian?.max_pelanggaran ? ` dari ${data.ujian.max_pelanggaran}` : ''}).</p>
             <button className="btn block mt" onClick={async () => { await enterFs(); if (isFullscreen()) setGuard(false); }}><Maximize size={18} /> Lanjutkan Ujian</button>

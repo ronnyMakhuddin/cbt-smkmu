@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Printer, IdCard } from 'lucide-react';
 import { supabase, q, fetchAll } from '../../lib/supabase';
-import { Empty, Spinner, Field, useToast, useSettings } from '../../components/ui';
+import { Empty, Spinner, Field, useToast, useSettings, DEFAULT_LOGO } from '../../components/ui';
 import { fmtDate } from '../../lib/util';
 
 export default function KartuUjian() {
@@ -77,7 +77,7 @@ export default function KartuUjian() {
               return (
                 <div className="kartu" key={s.id}>
                   <div className="kartu-head">
-                    {settings.logo_url && <img src={settings.logo_url} alt="" />}
+                    <img src={settings.logo_url || DEFAULT_LOGO} alt="" />
                     <div style={{ flex: 1, textAlign: 'center', lineHeight: 1.25 }}>
                       <div style={{ fontWeight: 900, fontSize: 13 }}>KARTU PESERTA UJIAN</div>
                       <div style={{ fontWeight: 700 }}>{judul}</div>

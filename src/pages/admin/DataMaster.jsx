@@ -37,7 +37,7 @@ function CrudList({ table, title, icon, fields, order }) {
   return (
     <div className="clay">
       <div className="row between mb">
-        <h2 className="row"><Icon size={22} color="#6c63ff" /> {title}</h2>
+        <h2 className="row"><Icon size={22} color="#f0832a" /> {title}</h2>
         <button className="btn sm" onClick={() => setEdit({})}><Plus size={16} /> Tambah</button>
       </div>
       {!rows ? <Spinner /> : rows.length === 0 ? <Empty /> : (

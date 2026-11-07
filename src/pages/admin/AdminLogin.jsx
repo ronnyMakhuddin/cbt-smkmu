@@ -39,14 +39,14 @@ export default function AdminLogin() {
         <div className="field">
           <label className="label">Email</label>
           <div className="row" style={{ flexWrap: 'nowrap' }}>
-            <Mail size={18} color="#7a7f9a" />
+            <Mail size={18} color="#7b7f86" />
             <input className="input" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@sekolah.sch.id" />
           </div>
         </div>
         <div className="field">
           <label className="label">Password</label>
           <div className="row" style={{ flexWrap: 'nowrap' }}>
-            <Lock size={18} color="#7a7f9a" />
+            <Lock size={18} color="#7b7f86" />
             <input className="input" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
           </div>
         </div>
