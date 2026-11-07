@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Plus, Pencil, Trash2, RefreshCw, ClipboardList, MonitorCheck, Clock, KeyRound, Copy } from 'lucide-react';
 import { supabase, q } from '../../lib/supabase';
 import { Modal, Empty, Spinner, Field, useToast, useConfirm } from '../../components/ui';
+import { useProfil, isAdmin } from '../../components/AdminLayout';
 import { fmtDate, toLocalInput, fromLocalInput, randomToken } from '../../lib/util';
 
 const DEFAULT = { durasi_menit: 90, acak_soal: true, acak_opsi: true, tampil_nilai: false, skor_parsial: false, max_pelanggaran: 3, aktif: true, kelas_ids: [] };
@@ -14,15 +15,19 @@ export default function Ujian() {
   const [banks, setBanks] = useState([]);
   const [kelas, setKelas] = useState([]);
   const [edit, setEdit] = useState(null);
+  const [ajar, setAjar] = useState([]);
+  const profil = useProfil();
+  const admin = isAdmin(profil);
 
   const load = async () => {
     try {
-      const [u, b, k] = await Promise.all([
+      const [u, b, k, a] = await Promise.all([
         q(supabase.from('ujian').select('*, bank_soal(nama, mapel(nama), soal(count))').order('created_at', { ascending: false })),
-        q(supabase.from('bank_soal').select('id, nama, mapel(nama)').order('nama')),
+        q(supabase.from('bank_soal').select('id, nama, mapel_id, mapel(nama)').order('nama')),
         q(supabase.from('kelas').select('*').order('nama')),
+        admin ? [] : q(supabase.from('pengajaran').select('*').eq('guru_id', profil.id)),
       ]);
-      setRows(u); setBanks(b); setKelas(k);
+      setRows(u); setBanks(b); setKelas(k); setAjar(a);
     } catch (e) { toast.err(e); setRows([]); }
   };
   useEffect(() => { load(); }, []);
@@ -34,6 +39,7 @@ export default function Ujian() {
     if (!e.nama?.trim()) return toast.err('Nama ujian wajib diisi');
     if (!e.bank_id) return toast.err('Pilih bank soal');
     if (!e.kelas_ids?.length) return toast.err('Pilih minimal 1 kelas peserta');
+    if (!admin && e.kelas_ids.some((k) => !kelasPilihan.some((x) => x.id === k))) return toast.err('Ada kelas yang bukan kelas ajar Anda untuk mapel ini');
     const p = {
       nama: e.nama.trim(), bank_id: e.bank_id, kelas_ids: e.kelas_ids,
       mulai: fromLocalInput(e.mulai_local), selesai: fromLocalInput(e.selesai_local),
@@ -67,6 +73,9 @@ export default function Ujian() {
     ? { ...u, mulai_local: toLocalInput(u.mulai), selesai_local: toLocalInput(u.selesai) }
     : { ...DEFAULT, token: randomToken() });
 
+  // kelas yang boleh dipilih: admin semua, guru hanya kelas yang diajar untuk mapel bank soal terpilih
+  const bankMapel = banks.find((b) => b.id === edit?.bank_id)?.mapel_id;
+  const kelasPilihan = admin ? kelas : kelas.filter((k) => ajar.some((a) => a.mapel_id === bankMapel && a.kelas_id === k.id));
   const toggleKelas = (id) => setEdit((e) => ({ ...e, kelas_ids: e.kelas_ids.includes(id) ? e.kelas_ids.filter((x) => x !== id) : [...e.kelas_ids, id] }));
 
   return (
@@ -145,8 +154,8 @@ export default function Ujian() {
           </div>
           <Field label="Kelas Peserta">
             <div className="row" style={{ gap: 8 }}>
-              {kelas.length === 0 && <span className="small muted">Belum ada kelas</span>}
-              {kelas.map((k) => (
+              {kelasPilihan.length === 0 && <span className="small muted">{admin ? 'Belum ada kelas' : edit.bank_id ? 'Anda belum ditugaskan mengajar mapel ini di kelas mana pun. Hubungi admin.' : 'Pilih bank soal terlebih dahulu'}</span>}
+              {kelasPilihan.map((k) => (
                 <button type="button" key={k.id} className={`btn sm ${edit.kelas_ids.includes(k.id) ? 'sky' : 'ghost'}`} onClick={() => toggleKelas(k.id)}>{k.nama}</button>
               ))}
             </div>

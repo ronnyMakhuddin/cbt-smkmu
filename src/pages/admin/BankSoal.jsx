@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Plus, Pencil, Trash2, BookOpen, ArrowRight } from 'lucide-react';
 import { supabase, q } from '../../lib/supabase';
 import { Modal, Empty, Spinner, Field, useToast, useConfirm } from '../../components/ui';
+import { useProfil, isAdmin } from '../../components/AdminLayout';
 
 export default function BankSoal() {
   const toast = useToast();
@@ -10,6 +11,7 @@ export default function BankSoal() {
   const [rows, setRows] = useState(null);
   const [mapel, setMapel] = useState([]);
   const [edit, setEdit] = useState(null);
+  const profil = useProfil();
 
   const load = async () => {
     try {
@@ -79,7 +81,7 @@ export default function BankSoal() {
           <Field label="Mata Pelajaran">
             <select className="input" value={edit.mapel_id || ''} onChange={(e) => setEdit({ ...edit, mapel_id: e.target.value })}>
               <option value="">- pilih -</option>
-              {mapel.map((m) => <option key={m.id} value={m.id}>{m.nama}</option>)}
+              {mapel.filter((m) => isAdmin(profil) || profil?.mapel_ids?.includes(m.id) || m.id === edit.mapel_id).map((m) => <option key={m.id} value={m.id}>{m.nama}</option>)}
             </select>
           </Field>
           <Field label="Keterangan"><input className="input" value={edit.keterangan || ''} onChange={(e) => setEdit({ ...edit, keterangan: e.target.value })} /></Field>

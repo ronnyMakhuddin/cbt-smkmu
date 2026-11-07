@@ -145,6 +145,14 @@ create table if not exists public.pengguna (
   mapel_ids uuid[] not null default '{}',
   created_at timestamptz default now()
 );
+-- Tugas mengajar: guru mengampu mapel di kelas tertentu
+create table if not exists public.pengajaran (
+  id uuid primary key default gen_random_uuid(),
+  guru_id uuid not null references public.pengguna(id) on delete cascade,
+  mapel_id uuid not null references public.mapel(id) on delete cascade,
+  kelas_id uuid not null references public.kelas(id) on delete cascade,
+  unique (guru_id, mapel_id, kelas_id)
+);
 alter table public.bank_soal add column if not exists created_by uuid default auth.uid();
 alter table public.ujian add column if not exists created_by uuid default auth.uid();
 
@@ -172,10 +180,20 @@ returns boolean language sql stable security definer set search_path = public as
     select 1 from public.ujian u where u.id = p_ujian and (u.created_by = auth.uid() or public.boleh_bank(u.bank_id)));
 $$;
 
+-- guru hanya boleh menjadwalkan ujian untuk kelas yang diajarnya pada mapel bank soal tsb
+create or replace function public.boleh_kelas_ujian(p_bank uuid, p_kelas uuid[])
+returns boolean language sql stable security definer set search_path = public as $$
+  select public.is_admin() or not exists(
+    select 1 from unnest(coalesce(p_kelas, '{}')) k
+     where not exists(
+       select 1 from public.pengajaran a join public.bank_soal b on b.mapel_id = a.mapel_id
+        where b.id = p_bank and a.guru_id = auth.uid() and a.kelas_id = k));
+$$;
+
 do $$
 declare t text;
 begin
-  foreach t in array array['settings','kelas','siswa','mapel','bank_soal','soal','ujian','peserta_ujian','log_pelanggaran','pengguna'] loop
+  foreach t in array array['settings','kelas','siswa','mapel','bank_soal','soal','ujian','peserta_ujian','log_pelanggaran','pengguna','pengajaran'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists "admin_all" on public.%I', t);
     execute format('create policy "admin_all" on public.%I for all to authenticated using (public.is_admin()) with check (public.is_admin())', t);
@@ -190,6 +208,7 @@ create policy "guru_baca" on public.kelas for select to authenticated using (pub
 create policy "guru_baca" on public.mapel for select to authenticated using (public.is_staf());
 create policy "guru_baca" on public.siswa for select to authenticated using (public.is_staf());
 create policy "guru_baca" on public.pengguna for select to authenticated using (id = auth.uid());
+create policy "guru_baca" on public.pengajaran for select to authenticated using (guru_id = auth.uid());
 -- guru: kelola bank soal, soal, ujian miliknya
 create policy "guru_kelola" on public.bank_soal for all to authenticated
   using (public.is_staf() and public.boleh_bank(id))
@@ -198,7 +217,7 @@ create policy "guru_kelola" on public.soal for all to authenticated
   using (public.boleh_bank(bank_id)) with check (public.boleh_bank(bank_id));
 create policy "guru_kelola" on public.ujian for all to authenticated
   using (public.is_staf() and (created_by = auth.uid() or public.boleh_bank(bank_id)))
-  with check (public.is_staf() and public.boleh_bank(bank_id));
+  with check (public.is_staf() and public.boleh_bank(bank_id) and public.boleh_kelas_ujian(bank_id, kelas_ids));
 create policy "guru_kelola" on public.peserta_ujian for all to authenticated
   using (public.boleh_ujian(ujian_id)) with check (public.boleh_ujian(ujian_id));
 create policy "guru_baca" on public.log_pelanggaran for select to authenticated
@@ -553,12 +572,16 @@ begin
   return row_to_json(p);
 end $$;
 
+drop function if exists public.admin_simpan_pengguna(uuid, text, text, text, text, uuid[]);
+-- p_ajar: [{"mapel_id":"...","kelas_id":"..."}, ...]
 create or replace function public.admin_simpan_pengguna(
-  p_id uuid, p_nama text, p_email text, p_password text, p_role text, p_mapel uuid[])
+  p_id uuid, p_nama text, p_email text, p_password text, p_role text, p_ajar jsonb default '[]'::jsonb)
 returns uuid
 language plpgsql security definer set search_path = public, extensions as $$
-declare uid uuid := p_id; em text := lower(trim(p_email));
+declare uid uuid := p_id; em text := lower(trim(p_email)); p_mapel uuid[];
 begin
+  select coalesce(array_agg(distinct (x ->> 'mapel_id')::uuid), '{}') into p_mapel
+    from jsonb_array_elements(coalesce(p_ajar, '[]'::jsonb)) x;
   if not public.is_admin() then raise exception 'Hanya admin yang dapat mengelola akun'; end if;
   if coalesce(trim(p_nama), '') = '' or em = '' then raise exception 'Nama dan email wajib diisi'; end if;
   if p_role not in ('admin', 'guru') then raise exception 'Peran tidak valid'; end if;
@@ -592,6 +615,14 @@ begin
       if length(p_password) < 6 then raise exception 'Password minimal 6 karakter'; end if;
       update auth.users set encrypted_password = crypt(p_password, gen_salt('bf')), updated_at = now() where id = uid;
     end if;
+  end if;
+  delete from public.pengajaran where guru_id = uid;
+  if p_role = 'guru' then
+    insert into public.pengajaran (guru_id, mapel_id, kelas_id)
+    select distinct uid, (x ->> 'mapel_id')::uuid, (x ->> 'kelas_id')::uuid
+      from jsonb_array_elements(coalesce(p_ajar, '[]'::jsonb)) x
+     where x ->> 'kelas_id' is not null
+    on conflict do nothing;
   end if;
   return uid;
 end $$;
@@ -636,7 +667,8 @@ grant execute on function public.is_staf() to authenticated;
 grant execute on function public.boleh_bank(uuid) to authenticated;
 grant execute on function public.boleh_ujian(uuid) to authenticated;
 grant execute on function public.profil_saya() to authenticated;
-grant execute on function public.admin_simpan_pengguna(uuid, text, text, text, text, uuid[]) to authenticated;
+grant execute on function public.admin_simpan_pengguna(uuid, text, text, text, text, jsonb) to authenticated;
+grant execute on function public.boleh_kelas_ujian(uuid, uuid[]) to authenticated;
 grant execute on function public.admin_hapus_pengguna(uuid) to authenticated;
 grant execute on function public.staf_reset_login(uuid) to authenticated;
 

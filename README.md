@@ -62,10 +62,10 @@ Aplikasi ujian berbasis komputer (Computer Based Test) untuk SMK. Dibangun denga
 | Peran | Akses |
 |---|---|
 | Admin | Semua menu: siswa, kelas & mapel, akun guru, bank soal, ujian, monitoring, kartu ujian, pengaturan |
-| Guru | Bank soal buatannya + bank soal mapel yang diampu, ujian dari bank soal tersebut, monitoring & nilai ujiannya, ganti password sendiri |
+| Guru | Bank soal mapel yang diajar, ujian hanya untuk **kelas yang diajar** pada mapel itu, monitoring & nilai ujiannya, ganti password sendiri |
 | Siswa | Login NIS + password, mengerjakan ujian |
 
-Akun guru/admin tambahan dibuat dari menu **Guru & Admin** (bukan dari dashboard Supabase). Guru login di `/admin` dengan email & password yang diberikan admin.
+Tugas mengajar (guru → mapel → kelas) diatur admin di menu **Guru & Admin** saat menambah/mengedit akun guru. Akun guru/admin tambahan dibuat dari menu **Guru & Admin** (bukan dari dashboard Supabase). Guru login di `/admin` dengan email & password yang diberikan admin.
 
 ## Format Import Soal (Excel)
 
