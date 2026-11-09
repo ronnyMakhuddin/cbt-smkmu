@@ -256,3 +256,27 @@ table.t tr td:last-child { border-radius: 0 14px 14px 0; }
   .print-area { box-shadow: none !important; padding: 0 !important; background: #fff !important; }
   .kartu-sheet { gap: 8px; }
 }
+
+/* ===== Dokumen cetak (naskah soal, daftar hadir, berita acara) ===== */
+.doc { background: #fff; color: #111; font-family: Arial, Helvetica, sans-serif; font-size: 13px; line-height: 1.45; padding: 28px 32px; border-radius: 18px; }
+.doc .content { line-height: 1.45; }
+.doc .content img { max-height: 220px; border-radius: 0; }
+.kop { display: flex; align-items: center; gap: 14px; border-bottom: 4px double #111; padding-bottom: 8px; margin-bottom: 12px; }
+.kop img { width: 70px; height: 70px; object-fit: contain; }
+.kop-text { flex: 1; text-align: center; line-height: 1.25; }
+.doc-title { text-align: center; font-weight: 800; font-size: 15px; margin: 6px 0 10px; text-transform: uppercase; }
+.doc table.grid-t { width: 100%; border-collapse: collapse; }
+.doc table.grid-t th, .doc table.grid-t td { border: 1px solid #333; padding: 5px 7px; vertical-align: top; }
+.doc table.grid-t th { background: #f1f1f1; }
+.doc table.info td { padding: 2px 6px 2px 0; vertical-align: top; }
+.soal-item { display: flex; gap: 8px; margin-bottom: 12px; break-inside: avoid; page-break-inside: avoid; }
+.soal-no { width: 26px; flex: none; font-weight: 700; }
+.soal-opsi { display: flex; gap: 8px; margin: 2px 0; }
+.doc.two-col .soal-list { column-count: 2; column-gap: 28px; column-rule: 1px solid #ccc; }
+.ttd { display: flex; justify-content: space-between; margin-top: 26px; }
+.ttd > div { text-align: center; min-width: 220px; }
+.page-break { break-after: page; page-break-after: always; }
+@media print {
+  .doc { padding: 0; border-radius: 0; font-size: 12px; }
+  .doc-wrap { box-shadow: none !important; padding: 0 !important; background: #fff !important; }
+}

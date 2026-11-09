@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Upload, Download, FileSpreadsheet, Pencil, Trash2, ArrowUp, ArrowDown, Check, X, ListChecks } from 'lucide-react';
+import { ArrowLeft, Printer, Plus, Upload, Download, FileSpreadsheet, Pencil, Trash2, ArrowUp, ArrowDown, Check, X, ListChecks } from 'lucide-react';
 import { supabase, q } from '../../lib/supabase';
 import { Modal, Empty, Spinner, Field, useToast, useConfirm } from '../../components/ui';
 import RichEditor from '../../components/RichEditor';
@@ -264,6 +264,7 @@ export default function SoalEditor() {
           </div>
         </div>
         <div className="row">
+          <Link className="btn ghost sm" to={`/admin/bank/${id}/cetak`}><Printer size={16} /> Cetak Soal</Link>
           <button className="btn ghost sm" onClick={template}><FileSpreadsheet size={16} /> Template</button>
           <button className="btn sky sm" onClick={() => fileRef.current.click()}><Upload size={16} /> Import Excel</button>
           <button className="btn ghost sm" onClick={exportXls} disabled={!rows?.length}><Download size={16} /> Export</button>

@@ -21,7 +21,7 @@ export default function KartuUjian() {
       try {
         const [k, u, s] = await Promise.all([
           q(supabase.from('kelas').select('*').order('nama')),
-          q(supabase.from('ujian').select('id,nama,mulai,durasi_menit,token,kelas_ids,aktif').order('mulai', { ascending: true, nullsFirst: false })),
+          q(supabase.from('ujian').select('id,nama,mulai,durasi_menit,token,kelas_ids,siswa_ids,aktif').order('mulai', { ascending: true, nullsFirst: false })),
           fetchAll(() => supabase.from('siswa').select('*').order('nama')),
         ]);
         setKelas(k); setUjian(u); setSiswa(s);
@@ -35,7 +35,7 @@ export default function KartuUjian() {
   const kelasMap = useMemo(() => Object.fromEntries(kelas.map((k) => [k.id, k.nama])), [kelas]);
   const list = (siswa || []).filter((s) => !fKelas || s.kelas_id === fKelas);
   const chosen = ujian.filter((u) => selUjian.includes(u.id));
-  const ujianFor = (s) => chosen.filter((u) => u.kelas_ids.includes(s.kelas_id));
+  const ujianFor = (s) => chosen.filter((u) => (u.siswa_ids?.length ? u.siswa_ids.includes(s.id) : u.kelas_ids.includes(s.kelas_id)));
   const toggleU = (id) => setSelUjian((a) => (a.includes(id) ? a.filter((x) => x !== id) : [...a, id]));
 
   return (

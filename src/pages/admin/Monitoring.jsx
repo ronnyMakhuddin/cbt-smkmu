@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { RefreshCw, Unlock, Square, RotateCcw, LogOut, Download, Calculator, ShieldAlert, MonitorCheck } from 'lucide-react';
+import { RefreshCw, Unlock, Square, RotateCcw, LogOut, Download, Calculator, ShieldAlert, MonitorCheck, CalendarPlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { randomToken } from '../../lib/util';
 import { supabase, q, rpc, fetchAll } from '../../lib/supabase';
-import { Modal, Empty, Spinner, useToast, useConfirm } from '../../components/ui';
+import { Modal, Empty, Spinner, Field, useToast, useConfirm } from '../../components/ui';
 import { downloadSheet } from '../../lib/excel';
 import { fmtDate } from '../../lib/util';
 
@@ -26,6 +28,8 @@ export default function Monitoring() {
   const [fStatus, setFStatus] = useState('');
   const [auto, setAuto] = useState(true);
   const [logs, setLogs] = useState(null);
+  const [susulan, setSusulan] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     (async () => {
@@ -46,7 +50,8 @@ export default function Monitoring() {
       await rpc('admin_finalisasi_kadaluarsa', { p_ujian: ujianId }).catch(() => {});
       const u = await q(supabase.from('ujian').select('*, bank_soal(nama, soal(count))').eq('id', ujianId).single());
       const [siswa, peserta] = await Promise.all([
-        u.kelas_ids.length ? fetchAll(() => supabase.from('siswa').select('id,nis,nama,kelas_id,session_token,last_seen').in('kelas_id', u.kelas_ids).order('nama')) : [],
+        u.siswa_ids?.length ? fetchAll(() => supabase.from('siswa').select('id,nis,nama,kelas_id,session_token,last_seen').in('id', u.siswa_ids).order('nama'))
+          : u.kelas_ids.length ? fetchAll(() => supabase.from('siswa').select('id,nis,nama,kelas_id,session_token,last_seen').in('kelas_id', u.kelas_ids).order('nama')) : [],
         fetchAll(() => supabase.from('peserta_ujian').select('id,siswa_id,status,mulai_at,batas_at,selesai_at,nilai,benar,pelanggaran,jawaban').eq('ujian_id', ujianId)),
       ]);
       const pMap = Object.fromEntries(peserta.map((p) => [p.siswa_id, p]));
@@ -84,6 +89,26 @@ export default function Monitoring() {
       act(() => q(supabase.from('peserta_ujian').delete().eq('id', r.p.id)), 'Ujian peserta direset');
   };
   const resetLogin = (r) => act(() => rpc('staf_reset_login', { p_siswa: r.id }), `Login ${r.nama} direset`);
+  const openSusulan = () => {
+    const belum = (rows || []).filter((r) => r.status === 'belum').map((r) => r.id);
+    setSusulan({ pilih: belum, nama: `Susulan - ${ujian.nama}`, durasi: ujian.durasi_menit });
+  };
+  const buatSusulan = async () => {
+    if (!susulan.pilih.length) return toast.err('Pilih minimal 1 siswa');
+    const kelasIds = [...new Set(rows.filter((r) => susulan.pilih.includes(r.id)).map((r) => r.kelas_id).filter(Boolean))];
+    try {
+      const u = ujian;
+      await q(supabase.from('ujian').insert({
+        nama: susulan.nama, bank_id: u.bank_id, kelas_ids: kelasIds, siswa_ids: susulan.pilih, induk_id: u.id,
+        durasi_menit: Number(susulan.durasi) || u.durasi_menit, token: randomToken(),
+        acak_soal: u.acak_soal, acak_opsi: u.acak_opsi, tampil_nilai: u.tampil_nilai, skor_parsial: u.skor_parsial,
+        max_pelanggaran: u.max_pelanggaran, aktif: true, mulai: null, selesai: null,
+      }));
+      toast.ok('Ujian susulan dibuat. Atur jadwalnya bila perlu.');
+      setSusulan(null);
+      navigate('/admin/ujian');
+    } catch (e) { toast.err(e); }
+  };
   const hitungUlang = () => act(() => rpc('admin_hitung_ulang', { p_ujian: ujianId }), 'Nilai dihitung ulang');
   const showLog = async (r) => {
     try {
@@ -136,6 +161,7 @@ export default function Monitoring() {
                 <span className="small muted">Rata-rata <b>{stats.rata}</b> · Tertinggi <b>{stats.max}</b> · Terendah <b>{stats.min}</b></span>
               </div>
               <div className="row">
+                <button className="btn amber sm" onClick={openSusulan}><CalendarPlus size={15} /> Buat Susulan</button>
                 <button className="btn ghost sm" onClick={hitungUlang}><Calculator size={15} /> Hitung Ulang</button>
                 <button className="btn mint sm" onClick={exportXls}><Download size={15} /> Export Nilai</button>
               </div>
@@ -176,6 +202,32 @@ export default function Monitoring() {
             )}
           </div>
         </>
+      )}
+
+      {susulan && (
+        <Modal title="Buat Ujian Susulan" onClose={() => setSusulan(null)} size="lg"
+          footer={<><button className="btn ghost" onClick={() => setSusulan(null)}>Batal</button>
+            <button className="btn" onClick={buatSusulan}><CalendarPlus size={16} /> Buat untuk {susulan.pilih.length} siswa</button></>}>
+          <p className="small muted mb">Soal sama dengan ujian induk, token baru dibuat otomatis. Hanya siswa yang dicentang yang bisa melihat ujian susulan. Siswa yang belum mulai sudah dicentang otomatis.</p>
+          <div className="grid g2" style={{ gap: 0, columnGap: 14 }}>
+            <Field label="Nama Ujian Susulan"><input className="input" value={susulan.nama} onChange={(e) => setSusulan({ ...susulan, nama: e.target.value })} /></Field>
+            <Field label="Durasi (menit)"><input className="input" type="number" value={susulan.durasi} onChange={(e) => setSusulan({ ...susulan, durasi: e.target.value })} /></Field>
+          </div>
+          <div className="row mb" style={{ gap: 8 }}>
+            <button className="tbtn" onClick={() => setSusulan({ ...susulan, pilih: rows.filter((r) => r.status === 'belum').map((r) => r.id) })}>Hanya yang belum ujian</button>
+            <button className="tbtn" onClick={() => setSusulan({ ...susulan, pilih: [] })}>Kosongkan</button>
+          </div>
+          <div style={{ maxHeight: '45vh', overflowY: 'auto' }} className="clay-in">
+            {rows.map((r) => (
+              <label key={r.id} className="check" style={{ display: 'flex', padding: '5px 4px' }}>
+                <input type="checkbox" checked={susulan.pilih.includes(r.id)}
+                  onChange={(e) => setSusulan({ ...susulan, pilih: e.target.checked ? [...susulan.pilih, r.id] : susulan.pilih.filter((x) => x !== r.id) })} />
+                <span className="grow">{r.nama} <span className="tiny muted">{r.nis} · {kelasMap[r.kelas_id]}</span></span>
+                <span className={`badge ${STATUS[r.status][1]}`}>{STATUS[r.status][0]}</span>
+              </label>
+            ))}
+          </div>
+        </Modal>
       )}
 
       {logs && (

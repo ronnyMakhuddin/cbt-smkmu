@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Database, BookOpen, ClipboardList, MonitorCheck, IdCard, Settings, LogOut, UserCog, ShieldOff } from 'lucide-react';
+import { LayoutDashboard, Users, Database, BookOpen, ClipboardList, MonitorCheck, IdCard, Settings, LogOut, UserCog, ShieldOff, FileText } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Spinner, Empty, useSettings, SchoolLogo } from './ui';
 
@@ -24,6 +24,7 @@ export const MENU = [
   { to: '/admin/bank', label: 'Bank Soal', icon: BookOpen },
   { to: '/admin/ujian', label: 'Ujian', icon: ClipboardList },
   { to: '/admin/monitoring', label: 'Monitoring & Nilai', icon: MonitorCheck },
+  { to: '/admin/administrasi', label: 'Administrasi', icon: FileText },
   { to: '/admin/kartu', label: 'Kartu Ujian', icon: IdCard, admin: true },
   { to: '/admin/pengaturan', label: 'Pengaturan', icon: Settings },
 ];

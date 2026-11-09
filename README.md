@@ -16,6 +16,9 @@ Aplikasi ujian berbasis komputer (Computer Based Test) untuk SMK. Dibangun denga
   - **Import soal dari Excel** (dengan pratinjau & validasi) dan export
 - Jadwal ujian: pilih kelas, waktu, durasi, token, acak soal/opsi, skor parsial, batas pelanggaran
 - Monitoring real-time (auto refresh): status peserta, progres, pelanggaran, buka kunci, reset, selesaikan paksa, export nilai Excel
+- **Cetak naskah soal** (kop sekolah, petunjuk, 1 atau 2 kolom) beserta **kunci jawaban** di halaman terpisah
+- **Administrasi ujian**: cetak **daftar hadir** dan **berita acara** per kelas/ruang/sesi, terisi otomatis dari data login ujian
+- **Ujian susulan**: dari Monitoring pilih siswa yang belum ikut, ujian susulan (soal sama, token baru) hanya terlihat oleh siswa tersebut
 - **Kartu ujian** siap cetak (8 per A4) berisi logo, identitas, username, password, serta **jadwal & token ujian**
 - **Pengaturan sekolah & logo**, ganti password admin
 

@@ -3,6 +3,8 @@ import { isConfigured } from './lib/supabase';
 import { ToastProvider, ConfirmProvider, SettingsProvider } from './components/ui';
 import AdminLayout, { AdminOnly } from './components/AdminLayout';
 import Guru from './pages/admin/Guru';
+import CetakSoal from './pages/admin/CetakSoal';
+import Administrasi from './pages/admin/Administrasi';
 import SetupNotice from './pages/SetupNotice';
 import AdminLogin from './pages/admin/AdminLogin';
 import Dashboard from './pages/admin/Dashboard';
@@ -35,6 +37,8 @@ export default function App() {
               <Route path="master" element={<AdminOnly><DataMaster /></AdminOnly>} />
               <Route path="bank" element={<BankSoal />} />
               <Route path="bank/:id" element={<SoalEditor />} />
+              <Route path="bank/:id/cetak" element={<CetakSoal />} />
+              <Route path="administrasi" element={<Administrasi />} />
               <Route path="ujian" element={<Ujian />} />
               <Route path="guru" element={<AdminOnly><Guru /></AdminOnly>} />
               <Route path="monitoring" element={<Monitoring />} />

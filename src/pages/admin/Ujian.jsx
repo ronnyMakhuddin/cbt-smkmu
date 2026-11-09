@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Pencil, Trash2, RefreshCw, ClipboardList, MonitorCheck, Clock, KeyRound, Copy } from 'lucide-react';
+import { Plus, Pencil, Trash2, RefreshCw, ClipboardList, MonitorCheck, Clock, KeyRound, Copy, Printer, FileText } from 'lucide-react';
 import { supabase, q } from '../../lib/supabase';
 import { Modal, Empty, Spinner, Field, useToast, useConfirm } from '../../components/ui';
 import { useProfil, isAdmin } from '../../components/AdminLayout';
@@ -93,7 +93,7 @@ export default function Ujian() {
             <div key={u.id} className="clay col">
               <div className="row between" style={{ alignItems: 'flex-start' }}>
                 <div style={{ minWidth: 0 }}>
-                  <h3>{u.nama}</h3>
+                  <h3>{u.nama} {u.siswa_ids?.length > 0 && <span className="badge amber">Susulan · {u.siswa_ids.length} siswa</span>}</h3>
                   <div className="small muted">{u.bank_soal?.mapel?.nama} · {u.bank_soal?.nama} · {u.bank_soal?.soal?.[0]?.count ?? 0} soal</div>
                 </div>
                 <button className={`badge ${u.aktif ? 'mint' : 'gray'}`} style={{ border: 0, cursor: 'pointer' }} onClick={() => toggle(u)}>
@@ -121,6 +121,8 @@ export default function Ujian() {
               <div className="row" style={{ justifyContent: 'flex-end', gap: 6 }}>
                 <button className="btn red icon sm" onClick={() => del(u)}><Trash2 size={15} /></button>
                 <button className="btn ghost sm" onClick={() => openEdit(u)}><Pencil size={15} /> Edit</button>
+                <Link className="btn ghost sm" to={`/admin/bank/${u.bank_id}/cetak?ujian=${u.id}`}><Printer size={15} /> Soal</Link>
+                <Link className="btn ghost sm" to={`/admin/administrasi?ujian=${u.id}`}><FileText size={15} /> Administrasi</Link>
                 <Link className="btn sm" to={`/admin/monitoring?ujian=${u.id}`}><MonitorCheck size={15} /> Monitoring</Link>
               </div>
             </div>
@@ -152,6 +154,9 @@ export default function Ujian() {
               <input type="number" min="0" className="input" value={edit.max_pelanggaran} onChange={(e) => setEdit({ ...edit, max_pelanggaran: e.target.value })} />
             </Field>
           </div>
+          {edit.siswa_ids?.length > 0 && (
+            <div className="clay-in mb small">Ujian susulan khusus untuk <b>{edit.siswa_ids.length} siswa</b> terpilih (diatur dari menu Monitoring). Pilihan kelas di bawah diabaikan.</div>
+          )}
           <Field label="Kelas Peserta">
             <div className="row" style={{ gap: 8 }}>
               {kelasPilihan.length === 0 && <span className="small muted">{admin ? 'Belum ada kelas' : edit.bank_id ? 'Anda belum ditugaskan mengajar mapel ini di kelas mana pun. Hubungi admin.' : 'Pilih bank soal terlebih dahulu'}</span>}

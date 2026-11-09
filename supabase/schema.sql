@@ -102,6 +102,10 @@ create table if not exists public.ujian (
   created_at timestamptz default now()
 );
 
+-- Ujian susulan: bila siswa_ids diisi, hanya siswa tersebut yang menjadi peserta
+alter table public.ujian add column if not exists siswa_ids uuid[] not null default '{}';
+alter table public.ujian add column if not exists induk_id uuid references public.ujian(id) on delete set null;
+
 create table if not exists public.peserta_ujian (
   id uuid primary key default gen_random_uuid(),
   ujian_id uuid not null references public.ujian(id) on delete cascade,
@@ -309,6 +313,12 @@ end $$;
 -- ---------------------------------------------------------------------
 -- RPC SISWA (dipanggil dari browser dengan role anon)
 -- ---------------------------------------------------------------------
+create or replace function public._peserta_sah(u public.ujian, s public.siswa)
+returns boolean language sql stable as $$
+  select case when cardinality(u.siswa_ids) > 0 then s.id = any(u.siswa_ids)
+              else s.kelas_id = any(u.kelas_ids) end;
+$$;
+
 create or replace function public.siswa_login(p_nis text, p_password text)
 returns json
 language plpgsql security definer set search_path = public as $$
@@ -364,7 +374,7 @@ begin
       join public.bank_soal b on b.id = u.bank_id
       left join public.mapel m on m.id = b.mapel_id
       left join public.peserta_ujian p on p.ujian_id = u.id and p.siswa_id = s.id
-     where u.aktif and s.kelas_id = any(u.kelas_ids)
+     where u.aktif and public._peserta_sah(u, s)
   ) x;
   return r;
 end $$;
@@ -376,7 +386,7 @@ declare s public.siswa; u public.ujian; p public.peserta_ujian; urut uuid[]; uop
 begin
   s := public._siswa_by_token(p_token);
   select * into u from public.ujian where id = p_ujian and aktif;
-  if not found or not (s.kelas_id = any(u.kelas_ids)) then raise exception 'Ujian tidak tersedia'; end if;
+  if not found or not public._peserta_sah(u, s) then raise exception 'Ujian tidak tersedia'; end if;
   if u.mulai is not null and now() < u.mulai then raise exception 'Ujian belum dimulai'; end if;
   if coalesce(u.token, '') <> '' and upper(trim(coalesce(p_kode, ''))) <> upper(trim(u.token)) then
     raise exception 'Token ujian salah';
